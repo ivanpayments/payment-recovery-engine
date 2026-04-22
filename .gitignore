@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+
+# Environment
+.env
+.env.local
+
+# MLflow (kept externally at ~/.codex/memories/project3-mlruns/)
+mlflow.db
+mlruns/
+
+# Yuno data — must stay out of this repo
+*yuno*
+*Yuno*
+
+# OS
+.DS_Store
+Thumbs.db

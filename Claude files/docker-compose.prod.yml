@@ -1,0 +1,6 @@
+services:
+  api:
+    ports:
+      - "127.0.0.1:8091:8000"
+    environment:
+      PROJECT3_PORT: "8000"

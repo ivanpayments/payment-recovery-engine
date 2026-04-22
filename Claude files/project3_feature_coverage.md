@@ -1,0 +1,145 @@
+# Project 3 Feature Coverage
+
+## Summary
+- total modeling-table columns: `151`
+- candidate original-decline columns available for feature engineering: `121`
+- derived label or retry-summary columns: `10`
+- columns generally excluded from training due to identifiers or post-decision data: `21`
+
+## Rich Feature Areas Available
+- transaction economics: amount, amount_usd, currency, processor fees, interchange estimate, scheme fee, fx flags, fx rate, settlement currency
+- payment context: card brand, card type, funding source, tokenization, wallet type, payment method, BIN, present mode
+- decline context: response_code, response_message, decline_bucket, is_soft_decline, scheme_response_code, timeout flag, mastercard advice code
+- geography: merchant country, card country, issuer country, billing country, shipping country, IP country, cross-border status
+- authentication: three_ds_requested, three_ds_outcome, three_ds_version, three_ds_flow, three_ds_eci, sca_exemption
+- latency and ops: latency_ms, latency_auth_ms, latency_3ds_ms, latency_bucket, routing metadata
+- risk context: risk_score, fraud_flag, chargeback flag, issuer size, MIT flag, account updater used
+- device and channel context: device_os, user agent family, contactless / wallet-related fields, recurring / stored credential context
+
+## Modeling Rule
+- We should keep as many original-decline columns as possible in the modeling table.
+- During actual model training, we should only use fields available at the moment the original decline happened.
+- Identifier columns and post-decision settlement fields can remain in the table for traceability but should not be used as model features.
+
+## Candidate Columns
+- `timestamp`
+- `merchant_id`
+- `merchant_vertical`
+- `merchant_mcc`
+- `merchant_country`
+- `archetype`
+- `processor_name`
+- `routing_reason`
+- `amount`
+- `amount_usd`
+- `currency`
+- `card_brand`
+- `card_type`
+- `card_country`
+- `is_cross_border`
+- `bin_first6`
+- `card_funding_source`
+- `is_token`
+- `token_type`
+- `present_mode`
+- `auth_status`
+- `response_code`
+- `response_message`
+- `decline_bucket`
+- `is_soft_decline`
+- `scheme_response_code`
+- `three_ds_requested`
+- `three_ds_outcome`
+- `three_ds_version`
+- `three_ds_flow`
+- `three_ds_eci`
+- `sca_exemption`
+- `latency_ms`
+- `latency_auth_ms`
+- `latency_3ds_ms`
+- `latency_bucket`
+- `is_retry`
+- `retry_attempt_num`
+- `retry_reason`
+- `hours_since_original`
+- `processor_fee_bps`
+- `interchange_estimate_bps`
+- `scheme_fee_bps`
+- `fx_applied`
+- `fx_rate`
+- `settlement_currency`
+- `risk_score`
+- `is_chargeback`
+- `chargeback_reason_code`
+- `fraud_flag`
+- `risk_model_version`
+- `billing_country`
+- `shipping_country`
+- `ip_country`
+- `issuer_country`
+- `psp_raw_response`
+- `gateway_id`
+- `acquirer_bin`
+- `acquirer_country`
+- `original_authorized_amount`
+- `authorized_at`
+- `merchant_descriptor`
+- `mcc_category`
+- `terminal_id`
+- `entry_mode`
+- `pos_condition_code`
+- `pan_entry_mode`
+- `cardholder_verification_method`
+- `cvv_result`
+- `avs_result`
+- `avs_zip_match`
+- `avs_street_match`
+- `is_recurring`
+- `recurring_type`
+- `subscription_id`
+- `installment_count`
+- `installment_number`
+- `wallet_type`
+- `wallet_token`
+- `network_token_present`
+- `dynamic_descriptor`
+- `soft_descriptor`
+- `partial_approval_flag`
+- `stand_in_auth`
+- `pin_verified`
+- `signature_captured`
+- `contactless`
+- `nfc_used`
+- `apple_pay`
+- `google_pay`
+- `samsung_pay`
+- `click_to_pay`
+- `payment_method_details`
+- `issuer_bank_name`
+- `issuer_bank_country`
+- `issuer_bank_bin_range`
+- `card_product_type`
+- `card_category`
+- `card_commercial_type`
+- `billing_zip`
+- `billing_city`
+- `billing_state`
+- `user_agent_family`
+- `payment_method`
+- `timeout_flag`
+- `stored_credential_id`
+- `is_mit`
+- `device_os`
+- `issuer_size`
+- `account_updater_used`
+- `mastercard_advice_code`
+- `mit_flag_revoked`
+- `routing_optimized`
+- `mcc_routing_optimized`
+- `smart_routed`
+- `scheme_ms`
+- `transaction_type`
+- `fx_bps`
+- `routed_network`
+- `risk_skip_flag`
+- `original_transaction_id_x`
