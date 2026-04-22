@@ -116,6 +116,15 @@ def decision_threshold() -> float:
     return float(metadata.get("decision_threshold", DEFAULT_THRESHOLD))
 
 
+def _to_float_or_nan(value: Any) -> float:
+    if value is None or value == "":
+        return float("nan")
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float("nan")
+
+
 def _derive_latency_bucket(latency_ms: float | None) -> str | None:
     if latency_ms is None or pd.isna(latency_ms):
         return None
@@ -140,23 +149,23 @@ def _json_safe(value: Any) -> Any:
 def enrich_payload(payload: dict[str, Any]) -> dict[str, Any]:
     enriched = dict(payload)
 
-    latency_ms = pd.to_numeric(pd.Series([enriched.get("latency_ms")]), errors="coerce").iloc[0]
+    latency_ms = _to_float_or_nan(enriched.get("latency_ms"))
     if enriched.get("latency_bucket") in (None, ""):
-        latency_bucket = _derive_latency_bucket(None if pd.isna(latency_ms) else float(latency_ms))
+        latency_bucket = _derive_latency_bucket(None if np.isnan(latency_ms) else latency_ms)
         if latency_bucket is not None:
             enriched["latency_bucket"] = latency_bucket
 
-    amount_usd = pd.to_numeric(pd.Series([enriched.get("amount_usd")]), errors="coerce").iloc[0]
-    amount = pd.to_numeric(pd.Series([enriched.get("amount")]), errors="coerce").iloc[0]
-    if pd.isna(amount_usd) and not pd.isna(amount):
-        enriched["amount_usd"] = float(amount)
-    if pd.isna(amount) and not pd.isna(amount_usd):
-        enriched["amount"] = float(amount_usd)
+    amount_usd = _to_float_or_nan(enriched.get("amount_usd"))
+    amount = _to_float_or_nan(enriched.get("amount"))
+    if np.isnan(amount_usd) and not np.isnan(amount):
+        enriched["amount_usd"] = amount
+    if np.isnan(amount) and not np.isnan(amount_usd):
+        enriched["amount"] = amount_usd
 
     if enriched.get("fx_applied") in (None, "") and enriched.get("fx_rate") not in (None, ""):
-        fx_rate = pd.to_numeric(pd.Series([enriched.get("fx_rate")]), errors="coerce").iloc[0]
-        if not pd.isna(fx_rate):
-            enriched["fx_applied"] = bool(abs(float(fx_rate) - 1.0) > 1e-9)
+        fx_rate = _to_float_or_nan(enriched.get("fx_rate"))
+        if not np.isnan(fx_rate):
+            enriched["fx_applied"] = bool(abs(fx_rate - 1.0) > 1e-9)
 
     return enriched
 
@@ -192,7 +201,7 @@ def payload_to_frame(payload: dict[str, Any]) -> pd.DataFrame:
             bool_value = _coerce_bool(value)
             row[col] = 0 if bool_value is None else int(bool_value)
         elif col in numeric_columns:
-            row[col] = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+            row[col] = _to_float_or_nan(value)
         elif col in categorical_columns:
             row[col] = "MISSING" if value in (None, "") else str(value)
         else:
@@ -284,7 +293,9 @@ def predict_one(payload: dict[str, Any], include_explanation: bool = False, expl
     metadata = load_model_metadata()
     threshold = decision_threshold()
     probability = float(booster.predict(frame, num_iteration=metadata.get("best_iteration"))[0])
-    amount_usd = pd.to_numeric(pd.Series([payload.get("amount_usd")]), errors="coerce").fillna(0).iloc[0]
+    amount_usd = _to_float_or_nan(payload.get("amount_usd"))
+    if np.isnan(amount_usd):
+        amount_usd = 0.0
     expected_value = float(expected_retry_value(np.array([probability]), np.array([amount_usd]))[0])
     action = str(decision_from_prob_and_value(np.array([probability]), np.array([expected_value]), threshold)[0])
     result = {

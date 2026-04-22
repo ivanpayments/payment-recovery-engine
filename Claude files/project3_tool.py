@@ -8,6 +8,7 @@ returns a compact explanation payload that the model can narrate.
 from __future__ import annotations
 
 import json
+import math
 import os
 from functools import lru_cache
 from pathlib import Path
@@ -94,30 +95,41 @@ def _json_ready(value: Any) -> Any:
     if hasattr(value, "item"):
         try:
             return value.item()
-        except Exception:
+        except (ValueError, AttributeError):
             return value
     return value
+
+
+def _to_float_or_nan(value: Any) -> float:
+    if value is None or value == "":
+        return float("nan")
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float("nan")
 
 
 def project3_payload_from_transaction(row: pd.Series) -> dict[str, Any]:
     processing_fee_bps = None
     interchange_bps = None
     scheme_fee_bps = None
-    amount_usd = pd.to_numeric(pd.Series([row.get("amount_usd")]), errors="coerce").iloc[0]
-    if not pd.isna(amount_usd) and float(amount_usd) > 0:
-        processing_fee = pd.to_numeric(pd.Series([row.get("processing_fee_usd")]), errors="coerce").iloc[0]
-        interchange_fee = pd.to_numeric(pd.Series([row.get("interchange_fee_usd")]), errors="coerce").iloc[0]
-        scheme_fee = pd.to_numeric(pd.Series([row.get("scheme_fee_usd")]), errors="coerce").iloc[0]
-        if not pd.isna(processing_fee):
-            processing_fee_bps = float(processing_fee) / float(amount_usd) * 10000
-        if not pd.isna(interchange_fee):
-            interchange_bps = float(interchange_fee) / float(amount_usd) * 10000
-        if not pd.isna(scheme_fee):
-            scheme_fee_bps = float(scheme_fee) / float(amount_usd) * 10000
+    amount_usd = _to_float_or_nan(row.get("amount_usd"))
+    if not math.isnan(amount_usd) and amount_usd > 0:
+        processing_fee = _to_float_or_nan(row.get("processing_fee_usd"))
+        interchange_fee = _to_float_or_nan(row.get("interchange_fee_usd"))
+        scheme_fee = _to_float_or_nan(row.get("scheme_fee_usd"))
+        if not math.isnan(processing_fee):
+            processing_fee_bps = processing_fee / amount_usd * 10000
+        if not math.isnan(interchange_fee):
+            interchange_bps = interchange_fee / amount_usd * 10000
+        if not math.isnan(scheme_fee):
+            scheme_fee_bps = scheme_fee / amount_usd * 10000
 
     three_ds_requested = bool(str(row.get("three_ds_version") or "").strip())
     three_ds_outcome = row.get("three_ds_status") or ("authenticated" if _boolish(row.get("three_ds_frictionless")) else "not_requested")
     decline_bucket = str(row.get("decline_category") or "unknown").lower()
+    fx_rate_float = _to_float_or_nan(row.get("fx_rate"))
+    fx_applied = (not math.isnan(fx_rate_float)) and fx_rate_float != 1.0
 
     payload = {
         "amount": row.get("amount"),
@@ -154,7 +166,7 @@ def project3_payload_from_transaction(row: pd.Series) -> dict[str, Any]:
         "processor_fee_bps": processing_fee_bps,
         "interchange_estimate_bps": interchange_bps,
         "scheme_fee_bps": scheme_fee_bps,
-        "fx_applied": (pd.to_numeric(pd.Series([row.get("fx_rate")]), errors="coerce").fillna(1.0).iloc[0] != 1.0),
+        "fx_applied": fx_applied,
         "fx_rate": row.get("fx_rate"),
         "settlement_currency": row.get("settlement_currency"),
         "risk_score": row.get("risk_score"),

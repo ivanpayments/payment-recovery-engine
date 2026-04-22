@@ -7,6 +7,13 @@ from typing import Dict, List
 import numpy as np
 import pandas as pd
 
+from project3_runtime import (
+    DEFAULT_FRICTION_COST_USD,
+    DEFAULT_MARGIN_RATE,
+    DEFAULT_RETRY_COST_USD,
+    decision_from_prob_and_value,
+    expected_retry_value,
+)
 from train_project3_lightgbm import (
     MODEL_META,
     MODEL_TXT,
@@ -24,11 +31,6 @@ ROOT = Path(__file__).resolve().parent
 REPORT = ROOT / "project3_decision_policy_evaluation.md"
 DECISIONS_CSV = ROOT / "project3_decision_policy_sample.csv"
 SUMMARY_CSV = ROOT / "project3_decision_policy_summary.csv"
-
-
-DEFAULT_RETRY_COST_USD = 0.12
-DEFAULT_MARGIN_RATE = 0.35
-DEFAULT_FRICTION_COST_USD = 0.03
 
 
 def load_model_and_metadata():
@@ -56,15 +58,6 @@ def prepare_features_for_scoring(df: pd.DataFrame, metadata: Dict) -> pd.DataFra
         cats = sorted(X_df[col].fillna("MISSING").astype(str).unique().tolist())
         X_df[col] = pd.Categorical(X_df[col], categories=cats)
     return X_df
-
-
-def expected_retry_value(prob: np.ndarray, amount_usd: np.ndarray) -> np.ndarray:
-    recovered_margin = prob * amount_usd * DEFAULT_MARGIN_RATE
-    return recovered_margin - DEFAULT_RETRY_COST_USD - DEFAULT_FRICTION_COST_USD
-
-
-def decision_from_prob_and_value(prob: np.ndarray, exp_value: np.ndarray, threshold: float) -> np.ndarray:
-    return np.where((prob >= threshold) & (exp_value > 0), "retry", "do_not_retry")
 
 
 def summarize_policy(

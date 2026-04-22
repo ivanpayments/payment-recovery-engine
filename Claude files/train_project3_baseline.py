@@ -8,6 +8,17 @@ from typing import Dict, List, Tuple
 import numpy as np
 import pandas as pd
 
+from project3_metrics import (
+    brier_score,
+    confusion,
+    find_best_threshold,
+    log_loss,
+    parse_bool_series,
+    precision_recall_f1,
+    roc_auc_score_manual,
+    sigmoid,
+)
+
 
 ROOT = Path(__file__).resolve().parent
 DATASET = ROOT / "project3_modeling_table.csv"
@@ -117,11 +128,6 @@ def _fail_if_cardholder_data(df: pd.DataFrame) -> None:
             "PAN / CVV / track / cardholder name / PIN must never enter training. "
             "Remove the offending columns or point DATASET at a synthetic file."
         )
-
-
-def parse_bool_series(series: pd.Series) -> pd.Series:
-    mapped = series.fillna(False).astype(str).str.lower().map({"true": True, "false": False})
-    return mapped.fillna(series).astype(bool)
 
 
 def load_dataframe() -> pd.DataFrame:
@@ -257,10 +263,6 @@ def prepare_matrix(
     }
 
 
-def sigmoid(x: np.ndarray) -> np.ndarray:
-    return 1.0 / (1.0 + np.exp(-np.clip(x, -35, 35)))
-
-
 def train_logistic_regression(
     X_train: np.ndarray,
     y_train: np.ndarray,
@@ -299,58 +301,6 @@ def train_logistic_regression(
                 break
 
     return best_weights, best_bias
-
-
-def log_loss(y_true: np.ndarray, y_prob: np.ndarray) -> float:
-    eps = 1e-12
-    probs = np.clip(y_prob, eps, 1 - eps)
-    return float(-(y_true * np.log(probs) + (1 - y_true) * np.log(1 - probs)).mean())
-
-
-def roc_auc_score_manual(y_true: np.ndarray, y_score: np.ndarray) -> float:
-    order = np.argsort(y_score)
-    ranks = np.empty_like(order, dtype=float)
-    ranks[order] = np.arange(1, len(y_score) + 1)
-    pos = y_true == 1
-    n_pos = pos.sum()
-    n_neg = len(y_true) - n_pos
-    if n_pos == 0 or n_neg == 0:
-        return float("nan")
-    sum_ranks_pos = ranks[pos].sum()
-    auc = (sum_ranks_pos - (n_pos * (n_pos + 1) / 2)) / (n_pos * n_neg)
-    return float(auc)
-
-
-def confusion(y_true: np.ndarray, y_pred: np.ndarray) -> Tuple[int, int, int, int]:
-    tp = int(((y_true == 1) & (y_pred == 1)).sum())
-    fp = int(((y_true == 0) & (y_pred == 1)).sum())
-    tn = int(((y_true == 0) & (y_pred == 0)).sum())
-    fn = int(((y_true == 1) & (y_pred == 0)).sum())
-    return tp, fp, tn, fn
-
-
-def precision_recall_f1(y_true: np.ndarray, y_pred: np.ndarray) -> Tuple[float, float, float]:
-    tp, fp, _, fn = confusion(y_true, y_pred)
-    precision = tp / (tp + fp) if (tp + fp) else 0.0
-    recall = tp / (tp + fn) if (tp + fn) else 0.0
-    f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
-    return precision, recall, f1
-
-
-def brier_score(y_true: np.ndarray, y_prob: np.ndarray) -> float:
-    return float(np.mean((y_prob - y_true) ** 2))
-
-
-def find_best_threshold(y_true: np.ndarray, y_prob: np.ndarray) -> Tuple[float, float]:
-    best_threshold = 0.5
-    best_f1 = -1.0
-    for threshold in np.linspace(0.05, 0.50, 46):
-        preds = (y_prob >= threshold).astype(int)
-        _, _, f1 = precision_recall_f1(y_true, preds)
-        if f1 > best_f1:
-            best_f1 = f1
-            best_threshold = float(threshold)
-    return best_threshold, best_f1
 
 
 def rule_baseline_probs(df: pd.DataFrame) -> np.ndarray:
