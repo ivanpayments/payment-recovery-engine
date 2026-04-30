@@ -20,3 +20,7 @@ mlruns/
 # OS
 .DS_Store
 Thumbs.db
+
+# Project 3 runtime — backup folders
+project3_recovery/backups_*/
+project3_recovery/__pycache__/
