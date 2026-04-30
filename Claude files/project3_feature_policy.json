@@ -1,5 +1,5 @@
 {
-  "version": "v1",
+  "version": "v2",
   "purpose": "Feature policy for the ML Payment Recovery Engine training pipeline",
   "target": "target_recovered_by_retry",
   "modeling_unit": "one row per original declined transaction",
@@ -45,7 +45,6 @@
     "risk_score",
     "fraud_flag",
     "risk_model_version",
-    "billing_country",
     "shipping_country",
     "ip_country",
     "issuer_country",
@@ -53,14 +52,11 @@
     "wallet_type",
     "network_token_present",
     "entry_mode",
-    "pan_entry_mode",
     "cardholder_verification_method",
     "cvv_result",
     "avs_result",
     "avs_zip_match",
     "avs_street_match",
-    "payment_method_details",
-    "issuer_bank_country",
     "card_product_type",
     "card_category",
     "card_commercial_type",
@@ -137,7 +133,11 @@
     "hours_to_recovery",
     "target_recovered_by_retry",
     "target_first_retry_approved",
-    "chargeback_reason_code"
+    "chargeback_reason_code",
+    "issuer_bank_country",
+    "billing_country",
+    "pan_entry_mode",
+    "payment_method_details"
   ],
   "review_before_final_use": [
     "is_chargeback",
@@ -164,6 +164,7 @@
   "notes": [
     "Only fields known at original decline time should be used for model training.",
     "Excluded fields may remain in the modeling table for traceability and reporting.",
-    "Review-list features are not banned, but should be included only after confirming they do not leak generator logic or post-decision information."
+    "Review-list features are not banned, but should be included only after confirming they do not leak generator logic or post-decision information.",
+    "v2 (2026-04-22): dropped 4 pure duplicates (issuer_bank_country=card_country, billing_country=card_country, pan_entry_mode=entry_mode, payment_method_details=payment_method) from allowlist."
   ]
 }

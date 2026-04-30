@@ -112,6 +112,47 @@ class PredictApiTests(unittest.TestCase):
         self.assertIn("recovery_probability", payload)
         self.assertNotIn("top_explanation_features", payload)
 
+    def test_missing_feature_not_surfaced_as_negative_driver(self) -> None:
+        """A feature the caller did not provide must not appear as a top SHAP
+        driver with a negative (or any non-zero) contribution. Nulls are
+        absence-of-signal, not negative signal."""
+        sparse_payload = {
+            "response_code": "51",
+            "is_soft_decline": True,
+            "amount_usd": 300,
+            "processor_name": "global-acquirer-a",
+            "merchant_country": "BR",
+            "merchant_vertical": "saas",
+            # Intentionally omit: interchange_estimate_bps, ip_country,
+            # risk_score, and every other optional field.
+        }
+        with TestClient(app) as client:
+            response = client.post(
+                "/predict?include_explanation=true&explanation_depth=8",
+                json=sparse_payload,
+            )
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        feats = body.get("top_explanation_features", [])
+        self.assertTrue(len(feats) > 0, "expected top features in response")
+
+        forbidden = {"interchange_estimate_bps", "ip_country", "risk_score"}
+        for f in feats:
+            name = f["feature"]
+            contribution = f["contribution"]
+            direction = f["direction"]
+            if name in forbidden:
+                self.assertEqual(
+                    contribution, 0.0,
+                    f"feature {name} was not provided yet surfaced with contribution {contribution}",
+                )
+                self.assertEqual(
+                    direction, "neutral",
+                    f"feature {name} was not provided yet marked direction={direction}",
+                )
+                self.assertNotIn("decreased", f["business_explanation"].lower())
+                self.assertNotIn("increased", f["business_explanation"].lower())
+
 
 if __name__ == "__main__":
     unittest.main()

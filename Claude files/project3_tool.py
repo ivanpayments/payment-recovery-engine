@@ -18,7 +18,8 @@ import httpx
 import pandas as pd
 
 
-PROJECT3_API_URL = os.getenv("PROJECT3_API_URL", "http://localhost:8000/predict")
+PROJECT3_API_URL = os.getenv("PROJECT3_API_URL", "https://ivanantonov.com/recovery/predict")
+PROJECT3_API_KEY = os.getenv("PROJECT3_API_KEY", "")
 PROJECT3_TIMEOUT_SEC = float(os.getenv("PROJECT3_TIMEOUT_SEC", "15"))
 PROJECT3_EXPLANATION_DEPTH = int(os.getenv("PROJECT3_EXPLANATION_DEPTH", "5"))
 PROJECT1_TRANSACTIONS_CSV = os.getenv(
@@ -229,12 +230,15 @@ def call_project3_api(args: dict[str, Any]) -> dict[str, Any]:
         return _err("not_found", f"Transaction `{transaction_id}` was not found in the local CSV.")
 
     payload = project3_payload_from_transaction(match.iloc[0])
+    headers = {"Content-Type": "application/json"}
+    if PROJECT3_API_KEY:
+        headers["Authorization"] = f"Bearer {PROJECT3_API_KEY}"
     try:
         response = httpx.post(
             PROJECT3_API_URL,
             params={"include_explanation": "true", "explanation_depth": PROJECT3_EXPLANATION_DEPTH},
             content=json.dumps(payload),
-            headers={"Content-Type": "application/json"},
+            headers=headers,
             timeout=PROJECT3_TIMEOUT_SEC,
         )
     except Exception as exc:
